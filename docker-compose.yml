@@ -50,7 +50,7 @@ services:
       HISTORY_SERVICE_URL: http://infra:${PORT}/api/history
       NASA_API_KEY: ${NASA_API_KEY}
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
-      CORS_ORIGIN: http://localhost:3002
+      CORS_ORIGIN: http://localhost:3000
     depends_on:
       - infra
 
@@ -63,7 +63,7 @@ services:
     container_name: soa-web
     restart: always
     ports:
-      - "3002:3002"
+      - "3000:3000"
     depends_on:
       - api
 
