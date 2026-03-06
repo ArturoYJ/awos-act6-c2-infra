@@ -1,4 +1,5 @@
 services:
+  # ──── Base de datos PostgreSQL ────
   db-historial:
     image: postgres:15-alpine
     container_name: soa-postgres-historial
@@ -11,6 +12,60 @@ services:
       - "5435:5432"
     volumes:
       - pg_data_historial:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ──── Microservicio de Historial (Express + JS) ────
+  infra:
+    build: .
+    container_name: soa-infra
+    restart: always
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      PORT: ${PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db-historial
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      CORS_ORIGIN: http://localhost:3001
+    depends_on:
+      db-historial:
+        condition: service_healthy
+
+  # ──── API Gateway (Express + TypeScript) ────
+  api:
+    build: ../api
+    container_name: soa-api
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
+      HISTORY_SERVICE_URL: http://infra:${PORT}/api/history
+      NASA_API_KEY: ${NASA_API_KEY}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
+      CORS_ORIGIN: http://localhost:3002
+    depends_on:
+      - infra
+
+  # ──── Frontend (Next.js) ────
+  web:
+    build:
+      context: ../web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    container_name: soa-web
+    restart: always
+    ports:
+      - "3002:3002"
+    depends_on:
+      - api
 
 volumes:
   pg_data_historial:
